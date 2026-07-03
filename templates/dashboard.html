@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}대시보드 - 영광조경 업무관리시스템{% endblock %}
+{% block title %}대시보드 - YG-Manager{% endblock %}
 
 {% block content %}
 <div class="dashboard">
@@ -9,90 +9,261 @@
     <div class="dashboard-grid">
         <!-- 오늘 작업 -->
         <div class="card">
-            <h3>오늘 작업</h3>
+            <h3>📅 오늘 작업</h3>
             <p class="stat">-</p>
         </div>
         
         <!-- 현장 수 -->
         <div class="card">
-            <h3>현장</h3>
+            <h3>📁 현장</h3>
             <p class="stat">{{ projects|length }}</p>
         </div>
         
         <!-- 총 사진 -->
         <div class="card">
-            <h3>총 사진</h3>
-            <p class="stat">0장</p>
+            <h3>📷 사진</h3>
+            <p class="stat">{{ projects|map(attribute='photos')|map('length')|sum }}장</p>
         </div>
         
         <!-- 작성된 보고서 -->
         <div class="card">
-            <h3>보고서</h3>
-            <p class="stat">0개</p>
+            <h3>📄 보고서</h3>
+            <p class="stat">{{ projects|map(attribute='reports')|map('length')|sum }}개</p>
         </div>
     </div>
     
     <!-- 현장 목록 -->
     <div class="section">
-        <h2>📋 최근 현장</h2>
-        <table class="projects-table">
-            <thead>
-                <tr>
-                    <th>회사명</th>
-                    <th>현장명</th>
-                    <th>년도/월</th>
-                    <th>작업</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for project in projects %}
-                <tr>
-                    <td>{{ project.company }}</td>
-                    <td>{{ project.project_name }}</td>
-                    <td>{{ project.year }}년 {{ project.month }}월</td>
-                    <td>
-                        <button class="btn btn-small" onclick="goToProject({{ project.id }})">상세보기</button>
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="4" class="text-center">현장이 없습니다.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <h2>📋 현장 목록</h2>
+        
+        {% if projects %}
+        <div class="projects-table-container">
+            <table class="projects-table">
+                <thead>
+                    <tr>
+                        <th>회사</th>
+                        <th>현장명</th>
+                        <th>년도/월</th>
+                        <th>사진</th>
+                        <th>보고서</th>
+                        <th>작업</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for project in projects %}
+                    <tr class="project-row" onclick="goToProject({{ project.id }})">
+                        <td><strong>{{ project.company }}</strong></td>
+                        <td>{{ project.project_name }}</td>
+                        <td>{{ project.year }}년 {{ project.month }}월</td>
+                        <td>
+                            <span class="badge">{{ project.photos|length }}장</span>
+                        </td>
+                        <td>
+                            {% if project.reports %}
+                                <span class="badge badge-success">✓</span>
+                            {% else %}
+                                <span class="badge badge-gray">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button class="btn btn-small btn-primary" onclick="goToProject({{ project.id }}); event.stopPropagation();">
+                                보기
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 2rem; color: #999;">
+            <p>현장이 없습니다.</p>
+        </div>
+        {% endif %}
     </div>
     
     <!-- 새 현장 추가 -->
     <div class="section">
         <h2>➕ 새 현장 추가</h2>
         <form id="new-project-form" onsubmit="createProject(event)">
-            <div class="form-group">
-                <label>회사명</label>
-                <input type="text" name="company" required placeholder="예: 수자원공사">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>회사명 *</label>
+                    <input type="text" name="company" required placeholder="예: 수자원공사">
+                </div>
+                <div class="form-group">
+                    <label>현장명 *</label>
+                    <input type="text" name="project_name" required placeholder="예: 도로 포장 공사">
+                </div>
             </div>
-            <div class="form-group">
-                <label>현장명</label>
-                <input type="text" name="project_name" required placeholder="예: 도로 포장 공사">
-            </div>
+            
             <div class="form-row">
                 <div class="form-group">
                     <label>년도</label>
-                    <input type="number" name="year" required min="2000" value="2024">
+                    <input type="number" name="year" min="2000" value="2024">
                 </div>
                 <div class="form-group">
                     <label>월</label>
-                    <input type="number" name="month" required min="1" max="12" value="1">
+                    <input type="number" name="month" min="1" max="12" value="1">
                 </div>
             </div>
+            
             <div class="form-group">
                 <label>설명 (선택)</label>
                 <textarea name="description" placeholder="프로젝트 설명..."></textarea>
             </div>
-            <button type="submit" class="btn btn-primary">현장 추가</button>
+            
+            <button type="submit" class="btn btn-success" style="width: 100%; max-width: 200px;">
+                ➕ 현장 추가
+            </button>
         </form>
     </div>
 </div>
+
+<style>
+.dashboard {
+    padding: 2rem 0;
+}
+
+.dashboard h1 {
+    margin-bottom: 2rem;
+    font-size: 2rem;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+}
+
+.card {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-align: center;
+    border-left: 4px solid #3498db;
+}
+
+.card h3 {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+}
+
+.stat {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #3498db;
+}
+
+.section {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.section h2 {
+    margin-bottom: 1.5rem;
+    font-size: 1.5rem;
+}
+
+.projects-table-container {
+    overflow-x: auto;
+}
+
+.projects-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.projects-table thead {
+    background: #34495e;
+    color: white;
+}
+
+.projects-table th,
+.projects-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.project-row {
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.project-row:hover {
+    background: #f9f9f9;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #3498db;
+    color: white;
+    border-radius: 20px;
+    font-size: 0.85rem;
+}
+
+.badge-success {
+    background: #2ecc71;
+}
+
+.badge-gray {
+    background: #bdc3c7;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-family: inherit;
+}
+
+.form-group textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
 
 <script>
 function createProject(event) {
@@ -111,15 +282,14 @@ function createProject(event) {
             alert(result.message);
             location.reload();
         } else {
-            alert('오류: ' + result.message);
+            alert('❌ ' + result.message);
         }
     })
-    .catch(err => alert('오류: ' + err));
+    .catch(err => alert('❌ 오류: ' + err));
 }
 
 function goToProject(projectId) {
-    // TODO: 프로젝트 상세 페이지로 이동
-    console.log('프로젝트:', projectId);
+    window.location.href = `/project/${projectId}`;
 }
 </script>
 {% endblock %}
