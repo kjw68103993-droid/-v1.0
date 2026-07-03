@@ -3,27 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}영광조경 업무관리시스템{% endblock %}</title>
+    <title>{% block title %}YG-Manager{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
     <nav class="navbar">
         <div class="container">
-            <div class="logo">🏠 영광조경 업무관리시스템</div>
+            <a href="/" class="logo">🏗️ YG-Manager</a>
             <ul class="nav-menu">
                 <li><a href="/">대시보드</a></li>
-                <li><a href="#">📁 현장관리</a></li>
-                <li><a href="#">📷 사진관리</a></li>
-                <li><a href="#">📄 보고서</a></li>
-                <li><a href="#">⚙ 설정</a></li>
+                <li><a href="/#">프로젝트</a></li>
+                <li><a href="https://github.com" target="_blank">도움말</a></li>
             </ul>
         </div>
     </nav>
 
-    <div class="container">
+    <main class="container">
         {% block content %}{% endblock %}
-    </div>
+    </main>
+
+    <footer class="footer">
+        <p>© 2024 영광조경 업무관리시스템 | <a href="#">개발자</a></p>
+    </footer>
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     {% block extra_js %}{% endblock %}

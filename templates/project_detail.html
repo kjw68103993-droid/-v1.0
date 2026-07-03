@@ -1,653 +1,270 @@
 {% extends "base.html" %}
 
-{% block title %}프로젝트 상세 - YG-Manager{% endblock %}
+{% block title %}{{ project.company }} - YG-Manager{% endblock %}
 
 {% block content %}
 <div class="project-detail">
     <div class="project-header">
-        <h1>📍 {{ project.company }} - {{ project.project_name }}</h1>
-        <p class="project-info">{{ project.year }}년 {{ project.month }}월</p>
+        <h1>{{ project.company }} - {{ project.project_name }}</h1>
+        <p>{{ project.year }}년 {{ project.month }}월</p>
     </div>
 
-    <!-- 탭 메뉴 -->
+    <!-- 탭 -->
     <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('photos')">📷 사진</button>
-        <button class="tab-btn" onclick="switchTab('report')">📄 보고서</button>
-        <button class="tab-btn" onclick="switchTab('settings')">⚙️ 설정</button>
+        <button class="tab-btn active" onclick="switchTab('photos')" data-tab="photos">📷 사진</button>
+        <button class="tab-btn" onclick="switchTab('report')" data-tab="report">📊 보고서</button>
+        <button class="tab-btn" onclick="switchTab('settings')" data-tab="settings">⚙️ 설정</button>
     </div>
 
-    <!-- 📷 사진 탭 -->
-    <div id="photos" class="tab-content active">
+    <!-- 사진 탭 -->
+    <div id="photos" class="tab-pane active">
+        <!-- 업로드 -->
         <div class="section">
-            <h2>사진 업로드</h2>
-            <form id="upload-form" onsubmit="uploadPhotos(event)">
-                <div class="upload-area" id="upload-area">
-                    <p>📁 사진을 드래그 앤 드롭하거나 클릭하여 선택</p>
-                    <input type="file" id="photo-input" name="photos" multiple accept="image/*" style="display:none;">
-                    <button type="button" class="btn btn-primary" onclick="document.getElementById('photo-input').click()">
-                        파일 선택
-                    </button>
-                </div>
-                <div id="selected-files" style="margin-top: 1rem;"></div>
-                <button type="submit" class="btn btn-success" style="margin-top: 1rem; width: 100%;">
-                    📤 업로드
-                </button>
+            <h2>📤 사진 업로드</h2>
+            <form id="upload-form" class="upload-area" ondrop="handleDrop(event)" ondragover="handleDragOver(event)">
+                <input type="file" id="file-input" multiple accept="image/*" style="display: none;">
+                <p>📁 사진을 드래그하거나 클릭하여 선택</p>
+                <button type="button" class="btn btn-primary" onclick="document.getElementById('file-input').click();">파일 선택</button>
+                <div id="file-list"></div>
+                <button type="submit" class="btn btn-success" style="display: none;" id="upload-btn">업로드</button>
             </form>
-
-            <div id="upload-progress" style="display:none; margin-top: 1rem;">
+            <div id="upload-progress" style="display: none;">
                 <p>업로드 중...</p>
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progress-fill"></div>
-                </div>
+                <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
             </div>
         </div>
 
-        <!-- 사진 통계 -->
+        <!-- 통계 -->
         <div class="section">
-            <h2>📊 사진 통계</h2>
+            <h2>📊 통계</h2>
             <div class="stats-grid">
-                <div class="stat-card">
-                    <h3>작업전</h3>
-                    <p class="stat-number" id="count-before">0</p>
-                </div>
-                <div class="stat-card">
-                    <h3>작업중</h3>
-                    <p class="stat-number" id="count-during">0</p>
-                </div>
-                <div class="stat-card">
-                    <h3>작업후</h3>
-                    <p class="stat-number" id="count-after">0</p>
-                </div>
+                <div class="stat-box"><p class="stat-label">작업전</p><p class="stat-num" id="stat-before">0</p></div>
+                <div class="stat-box"><p class="stat-label">작업중</p><p class="stat-num" id="stat-during">0</p></div>
+                <div class="stat-box"><p class="stat-label">작업후</p><p class="stat-num" id="stat-after">0</p></div>
             </div>
         </div>
 
-        <!-- 사진 갤러리 -->
+        <!-- 갤러리 -->
         <div class="section">
-            <h2>📸 사진 갤러리</h2>
-            
-            <!-- 필터 -->
+            <h2>🖼️ 갤러리</h2>
             <div class="filter-buttons">
                 <button class="filter-btn active" onclick="filterPhotos('all')">전체</button>
                 <button class="filter-btn" onclick="filterPhotos('작업전')">작업전</button>
                 <button class="filter-btn" onclick="filterPhotos('작업중')">작업중</button>
                 <button class="filter-btn" onclick="filterPhotos('작업후')">작업후</button>
             </div>
-
-            <div id="photo-gallery" class="photo-gallery">
-                <p style="text-align: center; color: #999;">사진이 없습니다.</p>
-            </div>
+            <div class="gallery" id="gallery"></div>
         </div>
     </div>
 
-    <!-- 📄 보고서 탭 -->
-    <div id="report" class="tab-content">
+    <!-- 보고서 탭 -->
+    <div id="report" class="tab-pane">
         <div class="section">
-            <h2>📋 보고서 생성</h2>
-            
-            <div class="report-info">
-                <p>✅ 업로드된 사진으로 자동으로 보고서가 생성됩니다.</p>
-                <p>📊 생성 파일: PPT, PDF (선택), 엑셀</p>
+            <h2>📊 보고서 생성</h2>
+            <p style="color: #666; margin-bottom: 1rem;">사진을 바탕으로 자동으로 PPT, PDF, 엑셀 보고서를 생성합니다.</p>
+            <button class="btn btn-primary btn-large" onclick="generateReport()" id="gen-btn">🚀 보고서 생성</button>
+            <div id="gen-progress" style="display: none; margin-top: 1rem;">
+                <p>생성 중...</p>
+                <div class="progress-bar"><div class="progress-fill" style="animation: progress 2s infinite;"></div></div>
             </div>
-
-            <button class="btn btn-primary btn-large" onclick="generateReport()" id="generate-btn">
-                🚀 보고서 생성
-            </button>
-
-            <div id="report-progress" style="display:none; margin-top: 2rem;">
-                <p>⏳ 보고서 생성 중...</p>
-                <div class="progress-bar">
-                    <div class="progress-fill" style="animation: progress 2s infinite;"></div>
-                </div>
-            </div>
-
-            <div id="report-result" style="display:none; margin-top: 2rem;">
-                <h3>✅ 보고서가 생성되었습니다!</h3>
-                <div class="report-files">
-                    <a href="#" class="report-file-btn" id="download-ppt">
-                        <span>📊</span> PPT 다운로드
-                    </a>
-                    <a href="#" class="report-file-btn" id="download-pdf" style="display:none;">
-                        <span>📕</span> PDF 다운로드
-                    </a>
-                    <a href="#" class="report-file-btn" id="download-excel">
-                        <span>📗</span> 엑셀 다운로드
-                    </a>
+            <div id="gen-result" style="display: none; margin-top: 1rem;">
+                <h3>✅ 생성 완료!</h3>
+                <div class="download-buttons">
+                    <a href="" class="btn btn-success" id="dl-ppt">📊 PPT</a>
+                    <a href="" class="btn btn-success" id="dl-pdf" style="display: none;">📕 PDF</a>
+                    <a href="" class="btn btn-success" id="dl-excel">📗 Excel</a>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ⚙️ 설정 탭 -->
-    <div id="settings" class="tab-content">
+    <!-- 설정 탭 -->
+    <div id="settings" class="tab-pane">
         <div class="section">
-            <h2>📁 폴더 관리</h2>
-            <button class="btn btn-info" onclick="openFolder()">
-                📂 탐색기에서 열기
-            </button>
+            <h2>📁 폴더 열기</h2>
+            <button class="btn btn-info" onclick="openFolder()">🗂️ 탐색기에서 열기</button>
         </div>
-
         <div class="section">
-            <h2>📋 프로젝트 정보</h2>
+            <h2>ℹ️ 프로젝트 정보</h2>
             <table class="info-table">
-                <tr>
-                    <td>회사</td>
-                    <td>{{ project.company }}</td>
-                </tr>
-                <tr>
-                    <td>현장명</td>
-                    <td>{{ project.project_name }}</td>
-                </tr>
-                <tr>
-                    <td>년도</td>
-                    <td>{{ project.year }}</td>
-                </tr>
-                <tr>
-                    <td>월</td>
-                    <td>{{ project.month }}</td>
-                </tr>
-                <tr>
-                    <td>생성일</td>
-                    <td>{{ project.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                </tr>
+                <tr><td>회사</td><td>{{ project.company }}</td></tr>
+                <tr><td>현장명</td><td>{{ project.project_name }}</td></tr>
+                <tr><td>기간</td><td>{{ project.year }}년 {{ project.month }}월</td></tr>
+                <tr><td>생성일</td><td>{{ project.created_at.strftime('%Y-%m-%d %H:%M') }}</td></tr>
             </table>
         </div>
     </div>
 </div>
 
 <style>
-.project-detail {
-    padding: 2rem 0;
-}
+.project-detail { padding: 2rem 0; }
+.project-header { margin-bottom: 2rem; border-bottom: 2px solid #2c3e50; padding-bottom: 1rem; }
+.project-header h1 { margin: 0 0 0.5rem 0; }
+.project-header p { color: #666; margin: 0; }
 
-.project-header {
-    margin-bottom: 2rem;
-    padding-bottom: 1rem;
-    border-bottom: 2px solid #3498db;
-}
+.tabs { display: flex; gap: 1rem; margin-bottom: 2rem; border-bottom: 1px solid #ddd; }
+.tab-btn { padding: 1rem 1.5rem; background: none; border: none; cursor: pointer; color: #666; border-bottom: 3px solid transparent; transition: all 0.3s; }
+.tab-btn:hover { color: #2c3e50; }
+.tab-btn.active { color: #2c3e50; border-bottom-color: #2c3e50; font-weight: bold; }
 
-.project-header h1 {
-    font-size: 2rem;
-    margin-bottom: 0.5rem;
-}
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
 
-.project-info {
-    color: #666;
-    font-size: 1.1rem;
-}
+.upload-area { border: 2px dashed #2c3e50; border-radius: 8px; padding: 2rem; text-align: center; cursor: pointer; background: #f8f9fa; transition: all 0.3s; }
+.upload-area:hover { background: #ecf0f1; border-color: #34495e; }
+.upload-area p { margin-bottom: 1rem; color: #666; }
 
-/* 탭 메뉴 */
-.tabs {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 2rem;
-    border-bottom: 1px solid #ddd;
-}
+#file-list { margin: 1rem 0; font-size: 0.9rem; color: #666; }
 
-.tab-btn {
-    padding: 1rem 1.5rem;
-    background: none;
-    border: none;
-    border-bottom: 3px solid transparent;
-    cursor: pointer;
-    font-size: 1rem;
-    transition: all 0.3s;
-    color: #666;
-}
+.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+.stat-box { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; text-align: center; }
+.stat-label { color: #666; margin: 0; }
+.stat-num { font-size: 2rem; font-weight: bold; color: #2c3e50; margin: 0.5rem 0 0 0; }
 
-.tab-btn:hover {
-    color: #3498db;
-}
+.filter-buttons { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
+.filter-btn { padding: 0.5rem 1rem; border: 1px solid #ddd; background: white; border-radius: 20px; cursor: pointer; transition: all 0.3s; }
+.filter-btn.active { background: #2c3e50; color: white; border-color: #2c3e50; }
 
-.tab-btn.active {
-    color: #3498db;
-    border-bottom-color: #3498db;
-    font-weight: bold;
-}
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 1rem; }
+.gallery-item { position: relative; border-radius: 4px; overflow: hidden; background: #f5f5f5; cursor: pointer; }
+.gallery-item img { width: 100%; height: 120px; object-fit: cover; }
+.gallery-tag { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: white; padding: 0.25rem; font-size: 0.75rem; text-align: center; }
 
-.tab-content {
-    display: none;
-}
+.btn-large { font-size: 1.1rem; padding: 1rem 2rem; width: 100%; max-width: 300px; display: block; margin: 0 auto; }
 
-.tab-content.active {
-    display: block;
-}
+.download-buttons { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem; }
+.btn.btn-success { text-align: center; text-decoration: none; display: inline-block; }
 
-/* 업로드 영역 */
-.upload-area {
-    border: 2px dashed #3498db;
-    border-radius: 8px;
-    padding: 2rem;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.3s;
-    background-color: #f8f9fa;
-}
+.info-table { width: 100%; border-collapse: collapse; }
+.info-table tr { border-bottom: 1px solid #ddd; }
+.info-table td { padding: 1rem; }
+.info-table td:first-child { font-weight: bold; width: 120px; color: #666; }
 
-.upload-area:hover {
-    background-color: #e8f4f8;
-    border-color: #2980b9;
-}
+.progress-bar { width: 100%; height: 6px; background: #ddd; border-radius: 3px; overflow: hidden; }
+.progress-fill { height: 100%; background: #2c3e50; width: 0%; transition: width 0.3s; }
 
-.upload-area p {
-    margin-bottom: 1rem;
-    color: #666;
-}
-
-/* 선택된 파일 */
-#selected-files {
-    background: #f5f5f5;
-    padding: 1rem;
-    border-radius: 4px;
-    max-height: 200px;
-    overflow-y: auto;
-}
-
-.selected-file {
-    padding: 0.5rem;
-    color: #666;
-    font-size: 0.9rem;
-}
-
-/* 통계 카드 */
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-    margin: 1rem 0;
-}
-
-.stat-card {
-    background: white;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 1.5rem;
-    text-align: center;
-}
-
-.stat-card h3 {
-    color: #666;
-    margin-bottom: 0.5rem;
-}
-
-.stat-number {
-    font-size: 2.5rem;
-    font-weight: bold;
-    color: #3498db;
-}
-
-/* 필터 버튼 */
-.filter-buttons {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 1.5rem;
-}
-
-.filter-btn {
-    padding: 0.5rem 1rem;
-    border: 1px solid #ddd;
-    background: white;
-    border-radius: 20px;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-.filter-btn:hover,
-.filter-btn.active {
-    background: #3498db;
-    color: white;
-    border-color: #3498db;
-}
-
-/* 사진 갤러리 */
-.photo-gallery {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 1rem;
-}
-
-.photo-item {
-    position: relative;
-    border-radius: 8px;
-    overflow: hidden;
-    background: #f5f5f5;
-    cursor: pointer;
-    transition: transform 0.3s;
-}
-
-.photo-item:hover {
-    transform: scale(1.05);
-}
-
-.photo-item img {
-    width: 100%;
-    height: 150px;
-    object-fit: cover;
-    display: block;
-}
-
-.photo-category {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: rgba(0, 0, 0, 0.7);
-    color: white;
-    padding: 0.5rem;
-    font-size: 0.8rem;
-    text-align: center;
-}
-
-/* 보고서 버튼 */
-.btn-large {
-    font-size: 1.1rem;
-    padding: 1rem 2rem;
-    width: 100%;
-    max-width: 400px;
-    display: block;
-    margin: 1rem auto;
-}
-
-.report-files {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.report-file-btn {
-    display: block;
-    padding: 1rem;
-    background: #2ecc71;
-    color: white;
-    text-align: center;
-    border-radius: 4px;
-    text-decoration: none;
-    transition: background 0.3s;
-}
-
-.report-file-btn:hover {
-    background: #27ae60;
-}
-
-.report-file-btn span {
-    margin-right: 0.5rem;
-}
-
-/* 정보 테이블 */
-.info-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.info-table tr {
-    border-bottom: 1px solid #ddd;
-}
-
-.info-table td {
-    padding: 1rem;
-}
-
-.info-table td:first-child {
-    font-weight: bold;
-    width: 150px;
-    color: #666;
-}
-
-/* 진행바 */
-.progress-bar {
-    width: 100%;
-    height: 8px;
-    background: #ddd;
-    border-radius: 4px;
-    overflow: hidden;
-    margin-top: 0.5rem;
-}
-
-.progress-fill {
-    height: 100%;
-    background: #3498db;
-    width: 0%;
-    transition: width 0.3s;
-}
-
-@keyframes progress {
-    0% { width: 0%; }
-    50% { width: 80%; }
-    100% { width: 100%; }
-}
+@keyframes progress { 0% { width: 0%; } 50% { width: 80%; } 100% { width: 100%; } }
 
 @media (max-width: 768px) {
-    .tabs {
-        flex-direction: column;
-    }
-    
-    .stats-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .photo-gallery {
-        grid-template-columns: repeat(2, 1fr);
-    }
+    .tabs { flex-direction: column; }
+    .stats-grid { grid-template-columns: 1fr; }
+    .gallery { grid-template-columns: repeat(2, 1fr); }
 }
 </style>
 
 <script>
 const projectId = {{ project.id }};
+let allPhotos = [];
+let currentFilter = 'all';
 
-// 탭 전환
-function switchTab(tabName) {
-    document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.classList.remove('active');
-    });
-    
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    
-    document.getElementById(tabName).classList.add('active');
+function switchTab(tab) {
+    document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById(tab).classList.add('active');
     event.target.classList.add('active');
     
-    if (tabName === 'photos') {
-        loadPhotos();
-        loadPhotoStats();
-    }
+    if (tab === 'photos') loadPhotos();
 }
 
-// 파일 선택
-document.getElementById('photo-input').addEventListener('change', function(e) {
-    const files = e.target.files;
-    const container = document.getElementById('selected-files');
-    
-    if (files.length > 0) {
-        let html = `<strong>선택된 파일: ${files.length}개</strong><div>`;
-        for (let file of files) {
-            html += `<div class="selected-file">✓ ${file.name}</div>`;
-        }
-        html += '</div>';
-        container.innerHTML = html;
-    }
+document.getElementById('file-input').addEventListener('change', () => {
+    const files = document.getElementById('file-input').files;
+    const list = document.getElementById('file-list');
+    list.innerHTML = `<strong>선택: ${files.length}개</strong>`;
+    document.getElementById('upload-btn').style.display = files.length > 0 ? 'block' : 'none';
 });
 
-// 드래그 앤 드롭
-const uploadArea = document.getElementById('upload-area');
-uploadArea.addEventListener('dragover', (e) => {
+function handleDragOver(e) {
     e.preventDefault();
-    uploadArea.style.backgroundColor = '#e8f4f8';
-});
+    document.getElementById('upload-form').style.background = '#ecf0f1';
+}
 
-uploadArea.addEventListener('dragleave', () => {
-    uploadArea.style.backgroundColor = '#f8f9fa';
-});
-
-uploadArea.addEventListener('drop', (e) => {
+function handleDrop(e) {
     e.preventDefault();
-    uploadArea.style.backgroundColor = '#f8f9fa';
-    
-    const files = e.dataTransfer.files;
-    document.getElementById('photo-input').files = files;
-    
-    const event = new Event('change', { bubbles: true });
-    document.getElementById('photo-input').dispatchEvent(event);
-});
+    document.getElementById('upload-form').style.background = '#f8f9fa';
+    document.getElementById('file-input').files = e.dataTransfer.files;
+    document.getElementById('file-input').dispatchEvent(new Event('change'));
+}
 
-// 사진 업로드
-function uploadPhotos(event) {
-    event.preventDefault();
+document.getElementById('upload-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const files = document.getElementById('file-input').files;
+    if (!files.length) return alert('파일을 선택하세요.');
     
-    const files = document.getElementById('photo-input').files;
-    if (files.length === 0) {
-        alert('파일을 선택하세요.');
-        return;
-    }
-    
-    const formData = new FormData();
-    for (let file of files) {
-        formData.append('photos', file);
-    }
+    const form = new FormData();
+    for (let file of files) form.append('photos', file);
     
     document.getElementById('upload-progress').style.display = 'block';
-    const progressFill = document.getElementById('progress-fill');
-    progressFill.style.width = '30%';
-    
-    fetch(`/api/upload_photos/${projectId}`, {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        progressFill.style.width = '100%';
-        
-        if (data.status === 'success') {
-            alert('✅ ' + data.message);
-            document.getElementById('photo-input').value = '';
-            document.getElementById('selected-files').innerHTML = '';
+    try {
+        const res = await fetch(`/api/project/${projectId}/photos/upload`, {method: 'POST', body: form});
+        const result = await res.json();
+        if (result.ok) {
+            alert('✅ ' + result.msg);
+            document.getElementById('file-input').value = '';
             loadPhotos();
-            loadPhotoStats();
-        } else {
-            alert('❌ ' + data.message);
-        }
-    })
-    .catch(error => {
-        alert('❌ 업로드 실패: ' + error);
-    })
-    .finally(() => {
-        setTimeout(() => {
-            document.getElementById('upload-progress').style.display = 'none';
-            progressFill.style.width = '0%';
-        }, 1000);
-    });
+        } else alert('❌ ' + result.msg);
+    } catch (e) { alert('❌ ' + e.message); }
+    finally { document.getElementById('upload-progress').style.display = 'none'; }
+});
+
+async function loadPhotos() {
+    try {
+        const res = await fetch(`/api/project/${projectId}/photos`);
+        allPhotos = await res.json();
+        const stats = await fetch(`/api/project/${projectId}/photos/stats`).then(r => r.json());
+        document.getElementById('stat-before').textContent = stats['작업전'] || 0;
+        document.getElementById('stat-during').textContent = stats['작업중'] || 0;
+        document.getElementById('stat-after').textContent = stats['작업후'] || 0;
+        displayPhotos();
+    } catch (e) { console.error(e); }
 }
 
-// 사진 통계 로드
-function loadPhotoStats() {
-    fetch(`/api/photos/${projectId}`)
-        .then(r => r.json())
-        .then(photos => {
-            const before = photos.filter(p => p.category === '작업전').length;
-            const during = photos.filter(p => p.category === '작업중').length;
-            const after = photos.filter(p => p.category === '작업후').length;
-            
-            document.getElementById('count-before').textContent = before;
-            document.getElementById('count-during').textContent = during;
-            document.getElementById('count-after').textContent = after;
-        });
-}
-
-// 사진 갤러리 로드
-let allPhotos = [];
-function loadPhotos() {
-    fetch(`/api/photos/${projectId}`)
-        .then(r => r.json())
-        .then(photos => {
-            allPhotos = photos;
-            displayPhotos(photos);
-        });
-}
-
-function displayPhotos(photos) {
-    const gallery = document.getElementById('photo-gallery');
-    
-    if (photos.length === 0) {
-        gallery.innerHTML = '<p style="text-align: center; color: #999; grid-column: 1/-1;">사진이 없습니다.</p>';
-        return;
-    }
-    
-    gallery.innerHTML = photos.map(photo => `
-        <div class="photo-item">
-            <img src="file://${photo.filename}" alt="${photo.filename}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22150%22 height=%22150%22%3E%3Crect fill=%22%23ddd%22 width=%22150%22 height=%22150%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 font-family=%22Arial%22 font-size=%2212%22 fill=%22%23999%22%3E사진 미리보기 불가%3C/text%3E%3C/svg%3E'">
-            <div class="photo-category">${photo.category}</div>
+function displayPhotos() {
+    const filtered = currentFilter === 'all' ? allPhotos : allPhotos.filter(p => p.category === currentFilter);
+    const gallery = document.getElementById('gallery');
+    gallery.innerHTML = filtered.map(p => `
+        <div class="gallery-item">
+            <img src="" alt="" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22120%22 height=%22120%22%3E%3Crect fill=%22%23ddd%22 width=%22120%22 height=%22120%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 font-size=%2210%22 fill=%22%23999%22%3E사진%3C/text%3E%3C/svg%3E'">
+            <div class="gallery-tag">${p.category}</div>
         </div>
     `).join('');
 }
 
-function filterPhotos(category) {
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
+function filterPhotos(cat) {
+    currentFilter = cat;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
     event.target.classList.add('active');
-    
-    if (category === 'all') {
-        displayPhotos(allPhotos);
-    } else {
-        displayPhotos(allPhotos.filter(p => p.category === category));
-    }
+    displayPhotos();
 }
 
-// 보고서 생성
-function generateReport() {
+async function generateReport() {
     if (!confirm('보고서를 생성하시겠습니까?')) return;
     
-    document.getElementById('generate-btn').disabled = true;
-    document.getElementById('report-progress').style.display = 'block';
-    document.getElementById('report-result').style.display = 'none';
+    document.getElementById('gen-btn').disabled = true;
+    document.getElementById('gen-progress').style.display = 'block';
+    document.getElementById('gen-result').style.display = 'none';
     
-    fetch(`/api/generate_report/${projectId}`, {
-        method: 'POST'
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.status === 'success') {
-            if (data.files.ppt) {
-                document.getElementById('download-ppt').href = `/download/${projectId}/ppt`;
-            }
-            if (data.files.pdf) {
-                document.getElementById('download-pdf').href = `/download/${projectId}/pdf`;
-                document.getElementById('download-pdf').style.display = 'block';
-            }
-            if (data.files.excel) {
-                document.getElementById('download-excel').href = `/download/${projectId}/excel`;
-            }
-            
-            document.getElementById('report-result').style.display = 'block';
-            alert('✅ ' + data.message);
-        } else {
-            alert('❌ ' + data.message);
-        }
-    })
-    .catch(error => {
-        alert('❌ 보고서 생성 실패: ' + error);
-    })
-    .finally(() => {
-        document.getElementById('report-progress').style.display = 'none';
-        document.getElementById('generate-btn').disabled = false;
-    });
+    try {
+        const res = await fetch(`/api/project/${projectId}/report/generate`, {method: 'POST'});
+        const result = await res.json();
+        if (result.ok) {
+            if (result.files.ppt) document.getElementById('dl-ppt').href = `/download/${projectId}/ppt`;
+            if (result.files.pdf) { document.getElementById('dl-pdf').href = `/download/${projectId}/pdf`; document.getElementById('dl-pdf').style.display = 'block'; }
+            if (result.files.excel) document.getElementById('dl-excel').href = `/download/${projectId}/excel`;
+            document.getElementById('gen-result').style.display = 'block';
+            alert('✅ ' + result.msg);
+        } else alert('❌ ' + result.msg);
+    } catch (e) { alert('❌ ' + e.message); }
+    finally { document.getElementById('gen-progress').style.display = 'none'; document.getElementById('gen-btn').disabled = false; }
 }
 
-// 폴더 열기
-function openFolder() {
-    fetch(`/open_folder/${projectId}`)
-        .then(r => r.json())
-        .then(data => {
-            if (data.status === 'success') {
-                alert('📂 ' + data.message);
-            } else {
-                alert('❌ ' + data.message);
-            }
-        })
-        .catch(error => alert('❌ 오류: ' + error));
+async function openFolder() {
+    try {
+        const res = await fetch(`/api/project/${projectId}/folder/open`);
+        const result = await res.json();
+        alert(result.ok ? '✅ 폴더가 열렸습니다.' : '❌ ' + result.msg);
+    } catch (e) { alert('❌ ' + e.message); }
 }
 
-window.addEventListener('load', () => {
-    loadPhotoStats();
-});
+window.addEventListener('load', loadPhotos);
 </script>
 {% endblock %}
