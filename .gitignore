@@ -1,0 +1,12 @@
+*.pyc
+__pycache__/
+*.db
+*.sqlite
+instance/
+.env
+.DS_Store
+영광조경/
+uploads/
+dist/
+build/
+*.egg-info/

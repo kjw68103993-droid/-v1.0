@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}영광조경 업무관리시스템{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="logo">🏠 영광조경 업무관리시스템</div>
+            <ul class="nav-menu">
+                <li><a href="/">대시보드</a></li>
+                <li><a href="#">📁 현장관리</a></li>
+                <li><a href="#">📷 사진관리</a></li>
+                <li><a href="#">📄 보고서</a></li>
+                <li><a href="#">⚙ 설정</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

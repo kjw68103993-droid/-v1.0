@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}대시보드 - 영광조경 업무관리시스템{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <h1>🏠 대시보드</h1>
+    
+    <div class="dashboard-grid">
+        <!-- 오늘 작업 -->
+        <div class="card">
+            <h3>오늘 작업</h3>
+            <p class="stat">-</p>
+        </div>
+        
+        <!-- 현장 수 -->
+        <div class="card">
+            <h3>현장</h3>
+            <p class="stat">{{ projects|length }}</p>
+        </div>
+        
+        <!-- 총 사진 -->
+        <div class="card">
+            <h3>총 사진</h3>
+            <p class="stat">0장</p>
+        </div>
+        
+        <!-- 작성된 보고서 -->
+        <div class="card">
+            <h3>보고서</h3>
+            <p class="stat">0개</p>
+        </div>
+    </div>
+    
+    <!-- 현장 목록 -->
+    <div class="section">
+        <h2>📋 최근 현장</h2>
+        <table class="projects-table">
+            <thead>
+                <tr>
+                    <th>회사명</th>
+                    <th>현장명</th>
+                    <th>년도/월</th>
+                    <th>작업</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for project in projects %}
+                <tr>
+                    <td>{{ project.company }}</td>
+                    <td>{{ project.project_name }}</td>
+                    <td>{{ project.year }}년 {{ project.month }}월</td>
+                    <td>
+                        <button class="btn btn-small" onclick="goToProject({{ project.id }})">상세보기</button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="text-center">현장이 없습니다.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- 새 현장 추가 -->
+    <div class="section">
+        <h2>➕ 새 현장 추가</h2>
+        <form id="new-project-form" onsubmit="createProject(event)">
+            <div class="form-group">
+                <label>회사명</label>
+                <input type="text" name="company" required placeholder="예: 수자원공사">
+            </div>
+            <div class="form-group">
+                <label>현장명</label>
+                <input type="text" name="project_name" required placeholder="예: 도로 포장 공사">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>년도</label>
+                    <input type="number" name="year" required min="2000" value="2024">
+                </div>
+                <div class="form-group">
+                    <label>월</label>
+                    <input type="number" name="month" required min="1" max="12" value="1">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>설명 (선택)</label>
+                <textarea name="description" placeholder="프로젝트 설명..."></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">현장 추가</button>
+        </form>
+    </div>
+</div>
+
+<script>
+function createProject(event) {
+    event.preventDefault();
+    const formData = new FormData(event.target);
+    const data = Object.fromEntries(formData);
+    
+    fetch('/api/projects', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.status === 'success') {
+            alert(result.message);
+            location.reload();
+        } else {
+            alert('오류: ' + result.message);
+        }
+    })
+    .catch(err => alert('오류: ' + err));
+}
+
+function goToProject(projectId) {
+    // TODO: 프로젝트 상세 페이지로 이동
+    console.log('프로젝트:', projectId);
+}
+</script>
+{% endblock %}
