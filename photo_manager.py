@@ -1,4 +1,5 @@
 import os
+import tempfile
 from pathlib import Path
 from datetime import datetime
 from PIL import Image
@@ -19,6 +20,8 @@ class PhotoManager:
         
         self.base_path = Path(base_path)
         self.base_path.mkdir(parents=True, exist_ok=True)
+        self.temp_dir = Path(tempfile.gettempdir()) / "yg_manager"
+        self.temp_dir.mkdir(parents=True, exist_ok=True)
     
     def get_project_folder(self, company, year, month):
         """프로젝트 폴더 경로 생성
@@ -67,16 +70,16 @@ class PhotoManager:
         photo_list = []
         
         for file in files:
-            # 임시 저장
-            temp_path = f"/tmp/{file.filename}"
-            file.save(temp_path)
+            # Windows/Mac/Linux 호환 임시 저장
+            temp_path = self.temp_dir / file.filename
+            file.save(str(temp_path))
             
             # EXIF 타임스탐프 추출 (또는 파일 수정 시간)
-            dt = self.get_exif_datetime(temp_path) or self.get_file_datetime(temp_path)
+            dt = self.get_exif_datetime(str(temp_path)) or self.get_file_datetime(str(temp_path))
             
             photo_list.append({
                 'file': file,
-                'temp_path': temp_path,
+                'temp_path': str(temp_path),
                 'timestamp': dt
             })
         
@@ -90,10 +93,14 @@ class PhotoManager:
         작업전 (Before) | 작업중 (During) | 작업후 (After)
         각각 약 100장씩
         """
+        if not uploaded_files:
+            return {'작업전': [], '작업중': [], '작업후': []}
+        
         sorted_files = self.sort_photos_by_timestamp(uploaded_files)
         total = len(sorted_files)
         third = total // 3
         
+        # 정렬 결과
         categories = {
             '작업전': sorted_files[:third],
             '작업중': sorted_files[third:2*third],
@@ -107,25 +114,30 @@ class PhotoManager:
             folder = self.get_photo_folder(company, year, month, category)
             
             for i, photo_info in enumerate(files, 1):
-                # 파일명 생성
-                ext = Path(photo_info['file'].filename).suffix
-                filename = f"{category}_{i:03d}{ext}"
-                filepath = folder / filename
-                
-                # 저장
-                photo_info['file'].save(str(filepath))
-                
-                saved_photos[category].append({
-                    'filename': filename,
-                    'filepath': str(filepath),
-                    'timestamp': photo_info['timestamp']
-                })
-                
-                # 임시 파일 삭제
                 try:
-                    os.remove(photo_info['temp_path'])
-                except:
-                    pass
+                    # 파일명 생성
+                    ext = Path(photo_info['file'].filename).suffix
+                    filename = f"{category}_{i:03d}{ext}"
+                    filepath = folder / filename
+                    
+                    # 저장
+                    photo_info['file'].save(str(filepath))
+                    
+                    saved_photos[category].append({
+                        'filename': filename,
+                        'filepath': str(filepath),
+                        'timestamp': photo_info['timestamp']
+                    })
+                except Exception as e:
+                    print(f"사진 저장 오류 ({filename}): {e}")
+                    continue
+                finally:
+                    # 임시 파일 삭제
+                    try:
+                        if os.path.exists(photo_info['temp_path']):
+                            os.remove(photo_info['temp_path'])
+                    except:
+                        pass
         
         return saved_photos
     
@@ -145,9 +157,19 @@ class PhotoManager:
         """사진 개수 조회"""
         if category:
             folder = self.get_photo_folder(company, year, month, category)
-            return len(list(folder.glob('*')))
+            if folder.exists():
+                return len([f for f in folder.glob('*') if f.is_file()])
+            return 0
         else:
             folder = self.get_project_folder(company, year, month) / "사진"
             if folder.exists():
-                return len(list(folder.rglob('*')))
+                return len([f for f in folder.rglob('*') if f.is_file()])
         return 0
+    
+    def cleanup_temp(self):
+        """임시 폴더 정리"""
+        try:
+            if self.temp_dir.exists():
+                shutil.rmtree(self.temp_dir)
+        except:
+            pass
